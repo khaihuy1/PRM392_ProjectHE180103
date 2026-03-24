@@ -10,6 +10,7 @@ class IntellectualSpinPage extends StatefulWidget {
 }
 
 class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
+  // (Các biến trạng thái giữ nguyên từ code cũ)
   int totalScore = 500;
   int highScore = 0;
   int betScore = 0;
@@ -26,7 +27,7 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
   final StreamController<int> selected = StreamController<int>.broadcast();
   TextEditingController _betController = TextEditingController();
 
-  // --- NGÂN HÀNG 20 CÂU HỎI TẾT HÀI HƯỚC ---
+  // --- NGÂN HÀNG CÂU HỎI TẾT ---
   final List<Map<String, dynamic>> questionBank = [
     {"q": "Tết này không giống Tết xưa, không còn được nhận...?", "a": ["Lì xì", "Lời phê", "Lương hưu", "Vé phạt"], "correct": 0},
     {"q": "Bánh chưng có hình gì?", "a": ["Hình tròn", "Hình vuông", "Hình tam giác", "Hình thoi"], "correct": 1},
@@ -52,6 +53,7 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
 
   List<Map<String, dynamic>> currentSessionQuestions = [];
 
+  // (Các hàm dispose, startCountdown, load/saveHighScore, endGame, prepareQuestions, showFinalResult giữ nguyên)
   @override
   void initState() {
     super.initState();
@@ -112,65 +114,6 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
     );
   }
 
-  void _showBetDialog() {
-    if (turnsLeft <= 0) { _endGame("Hết lượt lì xì rồi!"); return; }
-    _betController.clear();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        // Dùng StatefulBuilder để Timer chạy được ngay trong Dialog
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            // Lắng nghe Timer từ bên ngoài
-            Timer.periodic(Duration(seconds: 1), (t) {
-              if (mounted) setDialogState(() {});
-              if (secondsRemaining <= 0) t.cancel();
-            });
-
-            return AlertDialog(
-              title: Text("LƯỢT $turnsLeft/5 - 🕒 Còn ${secondsRemaining}s"),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text("Nhập điểm cược (Số dư: $totalScore)"),
-                    SizedBox(height: 10),
-                    TextField(
-                      controller: _betController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(border: OutlineInputBorder(), hintText: "Ví dụ: 50"),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    await _saveHighScore();
-                    Navigator.pop(context);
-                    Navigator.popUntil(context, (r) => r.isFirst);
-                  },
-                  child: Text("HỦY (THOÁT)"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    int? val = int.tryParse(_betController.text);
-                    if (val != null && val > 0 && val <= totalScore) {
-                      setState(() { betScore = val; _prepareQuestions(); });
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text("XÁC NHẬN"),
-                )
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _prepareQuestions() {
     setState(() {
       currentQuestionIndex = 0;
@@ -214,18 +157,102 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
     );
   }
 
+  void _showBetDialog() {
+    if (turnsLeft <= 0) { _endGame("Hết lượt lì xì rồi!"); return; }
+    _betController.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Timer.periodic(Duration(seconds: 1), (t) {
+              if (mounted) setDialogState(() {});
+              if (secondsRemaining <= 0) t.cancel();
+            });
+
+            return AlertDialog(
+              backgroundColor: Colors.white.withOpacity(0.9), // Làm thoại hơi trong suốt
+              title: Text("LƯỢT $turnsLeft/5 - 🕒 ${secondsRemaining}s", style: TextStyle(color: Colors.red[900])),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Nhập điểm cược (Số dư: $totalScore)", style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 15),
+                    TextField(
+                      controller: _betController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        hintText: "Ví dụ: 50",
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    await _saveHighScore();
+                    Navigator.pop(context);
+                    Navigator.popUntil(context, (r) => r.isFirst);
+                  },
+                  child: Text("HỦY (THOÁT)", style: TextStyle(color: Colors.grey[700])),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[900]),
+                  onPressed: () {
+                    int? val = int.tryParse(_betController.text);
+                    if (val != null && val > 0 && val <= totalScore) {
+                      setState(() { betScore = val; _prepareQuestions(); });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text("XÁC NHẬN", style: TextStyle(color: Colors.white)),
+                )
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- CẬP NHẬT HÀM BUILD ĐỂ CHÈN ẢNH NỀN ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.white), // Đổi màu nút back
         backgroundColor: Colors.red[900],
-        title: Text("🕒 ${secondsRemaining}s | 🔄 $turnsLeft | 🏆 $highScore"),
+        title: Text("🕒 ${secondsRemaining}s | 🏆 $highScore", style: TextStyle(color: Colors.white)),
       ),
-      body: isAnswering ? _buildQuestionUI() : _buildSpinUI(),
+      // Dùng Stack để chèn ảnh nền dưới cùng
+      body: Stack(
+        children: [
+          // Lớp 1: Ảnh nền Tết
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/tet_bg.png', // Thay ảnh Tết của Huy vào đây
+              fit: BoxFit.cover, // Đảm bảo ảnh phủ kín màn hình Reno 5
+            ),
+          ),
+
+          // Lớp 2: Giao diện game (Làm trong suốt nhẹ để hiện ảnh nền)
+          Container(
+            color: Colors.black.withOpacity(0.3), // Lớp phủ tối để dễ đọc chữ
+            child: isAnswering ? _buildQuestionUI() : _buildSpinUI(),
+          ),
+        ],
+      ),
     );
   }
 
+  // --- LÀM UI CÂU HỎI TRONG SUỐT ---
   Widget _buildQuestionUI() {
     if (currentSessionQuestions.isEmpty) return Container();
     var q = currentSessionQuestions[currentQuestionIndex];
@@ -233,16 +260,34 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Text("Câu: ${currentQuestionIndex + 1}/3", style: TextStyle(fontSize: 18, color: Colors.red[900])),
+          // Tiêu đề câu hỏi
+          Card(
+            color: Colors.white.withOpacity(0.8), // Card trong suốt
+            elevation: 5,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Text("Câu: ${currentQuestionIndex + 1}/3", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red[900])),
+            ),
+          ),
+
           Spacer(),
-          Text(q['q'], textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          // Nội dung câu hỏi (Chữ trắng trên nền tối)
+          Text(q['q'], textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 5)])),
           Spacer(),
+
+          // Danh sách câu trả lời
           ...List.generate(4, (i) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 15),
             child: SizedBox(
-              width: double.infinity, height: 55,
+              width: double.infinity, height: 60,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[100], foregroundColor: Colors.black),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[100]!.withOpacity(0.9), // Nút trong suốt
+                  foregroundColor: Colors.black,
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
                 onPressed: () {
                   setState(() {
                     if (i == q['correct']) {
@@ -251,7 +296,7 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
                     } else { isAnswering = false; }
                   });
                 },
-                child: Text(q['a'][i], style: TextStyle(fontSize: 16)),
+                child: Text(q['a'][i], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
           )),
@@ -260,10 +305,24 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
     );
   }
 
+  // --- LÀM UI VÒNG QUAY NỔI BẬT TRÊN NỀN ---
   Widget _buildSpinUI() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Thông tin lượt quay
+        Card(
+          color: Colors.white.withOpacity(0.8),
+          elevation: 5,
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Text("Lượt: $turnsLeft/5 | Số ô LÌ XÌ: $userSlots", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red[900])),
+          ),
+        ),
+
+        SizedBox(height: 30),
+
+        // Vòng quay
         SizedBox(
           height: 320,
           child: FortuneWheel(
@@ -273,9 +332,9 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
             items: [
               for (int i = 0; i < 5; i++)
                 FortuneItem(
-                  child: Text(i < userSlots ? "LÌ XÌ" : "MẤT TRẮNG", style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(i < userSlots ? "LÌ XÌ" : "MẤT TRẮNG", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   style: FortuneItemStyle(
-                    color: i < userSlots ? Colors.red : Colors.yellow[700]!,
+                    color: i < userSlots ? Colors.red[700]! : Colors.yellow[700]!,
                     borderColor: Colors.white,
                     borderWidth: 3,
                   ),
@@ -283,9 +342,17 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
             ],
           ),
         ),
-        SizedBox(height: 30),
+
+        SizedBox(height: 40),
+
+        // Nút quay
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red[900], padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[900],
+            padding: EdgeInsets.symmetric(horizontal: 50, vertical: 18),
+            elevation: 10,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          ),
           onPressed: _isSpinning ? null : () {
             setState(() => _isSpinning = true);
             final r = Random().nextInt(5);
@@ -297,7 +364,7 @@ class _IntellectualSpinPageState extends State<IntellectualSpinPage> {
               }
             });
           },
-          child: Text(_isSpinning ? "ĐANG LẮC..." : "QUAY LẤY HÊN", style: TextStyle(color: Colors.white, fontSize: 18)),
+          child: Text(_isSpinning ? "ĐANG LẮC..." : "QUAY LẤY HÊN", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
         )
       ],
     );
